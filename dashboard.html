@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Planner Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+    }
+
+    body {
+      background-color: #f4f6f8;
+      color: #333;
+    }
+
+    header {
+      background-color: #2b6777;
+      padding: 1rem;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 1rem;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .menu {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .section {
+      padding: 2rem;
+      background-color: white;
+      margin: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      background-color: #2b6777;
+      color: white;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
+
+    .logout-btn {
+      background-color: #f05454;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .logout-btn:hover {
+      background-color: #c44545;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>Budget Dreams</h2>
+    <nav class="menu">
+      <a href="#budget">Budget</a>
+      <a href="#objectives">Objectives</a>
+      <a href="#income">Income</a>
+      <a href="#savings">Savings</a>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </nav>
+  </header>
+
+  <section id="budget" class="section">
+    <h3>💰 Budget</h3>
+    <p>Track your planned and actual expenses here.</p>
+  </section>
+
+  <section id="objectives" class="section">
+    <h3>🎯 Objectives</h3>
+    <p>Define your short- and long-term financial goals.</p>
+  </section>
+
+  <section id="income" class="section">
+    <h3>💼 Income</h3>
+    <p>Log your income sources and totals.</p>
+  </section>
+
+  <section id="savings" class="section">
+    <h3>🏦 Savings</h3>
+    <p>Monitor your saving progress and set milestones.</p>
+  </section>
+
+  <footer>
+    &copy; 2025 Budget Dreams. All rights reserved.
+  </footer>
+
+  <script>
+    // Optional Firebase logout function
+    function logout() {
+      if (typeof firebase !== 'undefined') {
+        firebase.auth().signOut().then(() => {
+          alert("Logged out");
+          window.location.href = "index.html"; // Go back to login page
+        }).catch((error) => {
+          alert("Logout error: " + error.message);
+        });
+      } else {
+        window.location.href = "index.html"; // fallback if Firebase isn't used
+      }
+    }
+  </script>
+</body>
+</html>
