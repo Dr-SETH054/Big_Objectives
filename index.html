@@ -1,9 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Budget Dreams - Login</title>
+
+  <!-- ✅ Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+
   <style>
     :root {
       --primary-color: #4caf50;
@@ -169,11 +174,11 @@
   <div class="login-container">
     <h2>Login</h2>
     <form onsubmit="return handleLogin()">
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username">
+      <label for="login-email">Email</label>
+      <input type="text" id="login-email" name="email" placeholder="Enter your email">
 
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password">
+      <label for="login-password">Password</label>
+      <input type="password" id="login-password" name="password" placeholder="Enter your password">
 
       <label><input type="checkbox" onclick="togglePassword()"> Show Password</label>
 
@@ -183,6 +188,7 @@
       </div>
 
       <input type="submit" id="loginBtn" value="Login">
+      <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
     </form>
   </div>
 
@@ -190,22 +196,36 @@
     &copy; 2025 Budget Dreams Inc.
   </footer>
 
+  <!-- ✅ Your Firebase setup and login logic -->
   <script>
+    // Replace with your actual Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDucECRPTguaczzjbaxv8Tjy_n2uYoR4fM",
+      authDomain: "budgetdreams-4b58e.firebaseapp.com",
+      projectId: "budgetdreams-4b58e",
+      storageBucket: "budgetdreams-4b58e.appspot.com",
+      messagingSenderId: "842467931310",
+      appId: "1:842467931310:web:89365e0815f1707e55293f"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
     function togglePassword() {
-      const input = document.getElementById("password");
+      const input = document.getElementById("login-password");
       input.type = input.type === "password" ? "text" : "password";
     }
 
     function toggleDarkMode() {
-      document.body.classList.toggle('dark');
+      document.body.classList.toggle("dark");
     }
 
     function handleLogin() {
-      const username = document.getElementById("BlackScorpion54");
-      const password = document.getElementById("Haaba100%");
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
       const btn = document.getElementById("loginBtn");
 
-      if (!username.value || !password.value) {
+      if (!email || !password) {
         alert("Please fill in all fields.");
         return false;
       }
@@ -213,13 +233,17 @@
       btn.value = "Logging in...";
       btn.disabled = true;
 
-      setTimeout(() => {
-        btn.value = "Login";
-        btn.disabled = false;
-        alert("Login simulation complete.");
-      }, 2000);
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          window.location.href = "dashboard.html";
+        })
+        .catch(error => {
+          alert("Login failed: " + error.message);
+          btn.value = "Login";
+          btn.disabled = false;
+        });
 
-      return false; // prevent real form submission
+      return false;
     }
   </script>
 </body>
