@@ -9,5 +9,62 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+
+function togglePassword() {
+  const input = document.getElementById("login-password");
+  input.type = input.type === "password" ? "text" : "password";
+}
+
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+}
+
+function login() {
+  const email = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+
+  if (!email || !password) {
+    alert("Please fill in all fields.");
+    return false;
+  }
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then(() => {
+      window.location.href = "dashboard.html";
+    })
+    .catch(error => {
+      alert("Login error: " + error.message);
+    });
+
+  return false; // prevent form submission
+}
+
+function signUp() {
+  const email = document.getElementById("signup-email").value;
+  const password = document.getElementById("signup-password").value;
+
+  if (!email || !password) {
+    alert("Please fill in all fields.");
+    return false;
+  }
+
+  auth.createUserWithEmailAndPassword(email, password)
+    .then(() => {
+      alert("Signup successful! You can now log in.");
+      window.location.href = "index.html";
+    })
+    .catch(error => {
+      document.getElementById("signup-error").textContent = error.message;
+    });
+
+  return false; // prevent form submission
+}
+
+function logout() {
+  auth.signOut().then(() => {
+    window.location.href = "index.html";
+  });
+}
+
