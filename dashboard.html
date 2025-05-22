@@ -3,130 +3,134 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - Budget Dreams</title>
+  <title>Budget Dashboard</title>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
+    :root {
+      --primary: #4caf50;
+      --background: #f4f6f8;
+      --text: #333;
+      --card-bg: #ffffff;
+    }
+    body.dark {
+      --primary: #66bb6a;
+      --background: #1e1e1e;
+      --text: #f1f1f1;
+      --card-bg: #2b2b2b;
+    }
     body {
       font-family: 'Segoe UI', sans-serif;
+      background-color: var(--background);
+      color: var(--text);
       margin: 0;
-      background-color: #f4f6f8;
-      color: #333;
+      padding-bottom: 5rem;
     }
-
     header {
-      background-color: #4caf50;
-      padding: 1rem;
+      background: var(--primary);
       color: white;
+      padding: 1rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-
-    nav a {
-      color: white;
-      text-decoration: none;
-      margin: 0 1rem;
-      font-weight: bold;
-    }
-
-    .section {
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
       padding: 2rem;
-      background-color: white;
-      margin: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
-
-    .section h3 {
-      margin-bottom: 1rem;
-    }
-
-    form input, form button {
-      padding: 0.6rem;
-      margin: 0.3rem 0;
-      width: 100%;
-      font-size: 1rem;
-    }
-
-    .logout-btn {
-      background-color: #f05454;
-      color: white;
-      border: none;
-      padding: 0.5rem 1rem;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    footer {
-      text-align: center;
+    .card {
+      background: var(--card-bg);
       padding: 1rem;
-      background-color: #4caf50;
-      color: white;
-      position: fixed;
-      bottom: 0;
+      border-radius: 10px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    }
+    h3 { color: var(--primary); }
+    input, button {
       width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
+    button:hover { opacity: 0.9; }
+    #chartCard { grid-column: span 2; }
+    footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 0.5rem;
     }
   </style>
 </head>
 <body>
-
   <header>
     <h2>Budget Dreams Dashboard</h2>
-    <nav>
-      <a href="#budget">Budget</a>
-      <a href="#objectives">Objectives</a>
-      <a href="#income">Income</a>
-      <a href="#savings">Savings</a>
-      <button class="logout-btn" onclick="logout()">Logout</button>
-    </nav>
+    <div>
+      <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+      <button onclick="logout()">Logout</button>
+    </div>
   </header>
 
-  <section id="budget" class="section">
-    <h3>💰 Budget</h3>
-    <form onsubmit="return saveBudget()">
-      <input type="text" id="budget-category" placeholder="Category (e.g., Rent)" required />
-      <input type="number" id="budget-amount" placeholder="Amount" required />
-      <button type="submit">Save Budget</button>
-    </form>
-  </section>
+  <div class="container">
+    <div class="card" id="budget">
+      <h3>💰 Budget</h3>
+      <form onsubmit="return saveData('budgets', ['budget-category', 'budget-amount'])">
+        <input id="budget-category" placeholder="Category" required>
+        <input type="number" id="budget-amount" placeholder="Amount" required>
+        <button>Save</button>
+      </form>
+      <ul id="budget-list"></ul>
+    </div>
 
-  <section id="objectives" class="section">
-    <h3>🎯 Objectives</h3>
-    <form onsubmit="return saveObjective()">
-      <input type="text" id="objective-name" placeholder="Goal (e.g., Buy a car)" required />
-      <input type="number" id="objective-amount" placeholder="Target Amount" required />
-      <button type="submit">Save Objective</button>
-    </form>
-  </section>
+    <div class="card" id="income">
+      <h3>💼 Income</h3>
+      <form onsubmit="return saveData('income', ['income-source', 'income-amount'])">
+        <input id="income-source" placeholder="Source" required>
+        <input type="number" id="income-amount" placeholder="Amount" required>
+        <button>Save</button>
+      </form>
+      <ul id="income-list"></ul>
+    </div>
 
-  <section id="income" class="section">
-    <h3>💼 Income</h3>
-    <form onsubmit="return saveIncome()">
-      <input type="text" id="income-source" placeholder="Source (e.g., Job)" required />
-      <input type="number" id="income-amount" placeholder="Amount" required />
-      <button type="submit">Save Income</button>
-    </form>
-  </section>
+    <div class="card" id="objectives">
+      <h3>🎯 Objectives</h3>
+      <form onsubmit="return saveData('objectives', ['objective-name', 'objective-amount'])">
+        <input id="objective-name" placeholder="Objective" required>
+        <input type="number" id="objective-amount" placeholder="Target Amount" required>
+        <button>Save</button>
+      </form>
+      <ul id="objectives-list"></ul>
+    </div>
 
-  <section id="savings" class="section">
-    <h3>🏦 Savings</h3>
-    <form onsubmit="return saveSavings()">
-      <input type="text" id="savings-type" placeholder="Type (e.g., Emergency Fund)" required />
-      <input type="number" id="savings-amount" placeholder="Amount Saved" required />
-      <button type="submit">Save Savings</button>
-    </form>
-  </section>
+    <div class="card" id="savings">
+      <h3>🏦 Savings</h3>
+      <form onsubmit="return saveData('savings', ['savings-type', 'savings-amount'])">
+        <input id="savings-type" placeholder="Type" required>
+        <input type="number" id="savings-amount" placeholder="Amount Saved" required>
+        <button>Save</button>
+      </form>
+      <ul id="savings-list"></ul>
+    </div>
+
+    <div class="card" id="chartCard">
+      <h3>📊 Income vs Budget</h3>
+      <canvas id="financeChart"></canvas>
+    </div>
+  </div>
 
   <footer>
     &copy; 2025 Budget Dreams Inc.
   </footer>
 
-  <!-- Firebase Auth + Firestore Setup -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDucECRPTguaczzjbaxv8Tjy_n2uYoR4fM",
@@ -136,87 +140,68 @@
       messagingSenderId: "842467931310",
       appId: "1:842467931310:web:89365e0815f1707e55293f"
     };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
 
     auth.onAuthStateChanged(user => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
+      if (!user) window.location.href = "index.html";
+      else {
         window.currentUser = user;
+        loadAllData();
       }
     });
 
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "index.html";
+    function logout() { auth.signOut().then(() => location.href = "index.html"); }
+    function toggleDarkMode() { document.body.classList.toggle("dark"); }
+
+    async function saveData(collection, fields) {
+      event.preventDefault();
+      const data = { userId: auth.currentUser.uid, created: firebase.firestore.FieldValue.serverTimestamp() };
+      fields.forEach(id => data[id.replace(/-.*/, '')] = document.getElementById(id).value);
+      await db.collection(collection).add(data);
+      alert("Saved to " + collection);
+      loadData(collection);
+      event.target.reset();
+      return false;
+    }
+
+    async function loadAllData() {
+      ['budgets','income','objectives','savings'].forEach(loadData);
+    }
+
+    async function loadData(collection) {
+      const list = document.getElementById(collection + "-list");
+      list.innerHTML = "";
+      const snapshot = await db.collection(collection).where("userId", "==", auth.currentUser.uid).get();
+      let total = 0;
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const item = Object.values(data).filter(v => typeof v === 'string' || typeof v === 'number').join(" - ");
+        list.innerHTML += `<li>${item}</li>`;
+        if (collection === 'income' || collection === 'budgets') total += Number(data.amount);
       });
+      if (collection === 'income') window.incomeTotal = total;
+      if (collection === 'budgets') window.budgetTotal = total;
+      if (window.incomeTotal && window.budgetTotal) renderChart();
     }
 
-    function saveBudget() {
-      const category = document.getElementById("budget-category").value;
-      const amount = parseFloat(document.getElementById("budget-amount").value);
-
-      db.collection("budgets").add({
-        userId: auth.currentUser.uid,
-        category,
-        amount,
-        created: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        alert("Budget saved!");
-      }).catch(err => alert(err.message));
-
-      return false;
-    }
-
-    function saveObjective() {
-      const name = document.getElementById("objective-name").value;
-      const amount = parseFloat(document.getElementById("objective-amount").value);
-
-      db.collection("objectives").add({
-        userId: auth.currentUser.uid,
-        name,
-        amount,
-        created: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        alert("Objective saved!");
-      }).catch(err => alert(err.message));
-
-      return false;
-    }
-
-    function saveIncome() {
-      const source = document.getElementById("income-source").value;
-      const amount = parseFloat(document.getElementById("income-amount").value);
-
-      db.collection("income").add({
-        userId: auth.currentUser.uid,
-        source,
-        amount,
-        created: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        alert("Income saved!");
-      }).catch(err => alert(err.message));
-
-      return false;
-    }
-
-    function saveSavings() {
-      const type = document.getElementById("savings-type").value;
-      const amount = parseFloat(document.getElementById("savings-amount").value);
-
-      db.collection("savings").add({
-        userId: auth.currentUser.uid,
-        type,
-        amount,
-        created: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(() => {
-        alert("Savings saved!");
-      }).catch(err => alert(err.message));
-
-      return false;
+    function renderChart() {
+      const ctx = document.getElementById('financeChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Income', 'Budget'],
+          datasets: [{
+            data: [window.incomeTotal, window.budgetTotal],
+            backgroundColor: ['#2196f3', '#4caf50']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
     }
   </script>
 </body>
