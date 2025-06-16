@@ -1,208 +1,353 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Budget Dashboard</title>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    :root {
-      --primary: #4caf50;
-      --background: #f4f6f8;
-      --text: #333;
-      --card-bg: #ffffff;
-    }
-    body.dark {
-      --primary: #66bb6a;
-      --background: #1e1e1e;
-      --text: #f1f1f1;
-      --card-bg: #2b2b2b;
-    }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background-color: var(--background);
-      color: var(--text);
-      margin: 0;
-      padding-bottom: 5rem;
-    }
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      padding: 2rem;
-    }
-    .card {
-      background: var(--card-bg);
-      padding: 1rem;
-      border-radius: 10px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.1);
-    }
-    h3 { color: var(--primary); }
-    input, button {
-      width: 100%;
-      padding: 0.75rem;
-      margin: 0.5rem 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    button { background: var(--primary); color: white; font-weight: bold; cursor: pointer; }
-    button:hover { opacity: 0.9; }
-    #chartCard { grid-column: span 2; }
-    footer {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: var(--primary);
-      color: white;
-      text-align: center;
-      padding: 0.5rem;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h2>Budget Dreams Dashboard</h2>
-    <div>
-      <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
-      <button onclick="logout()">Logout</button>
-    </div>
-  </header>
-
-  <div class="container">
-    <div class="card" id="budget">
-      <h3>💰 Budget</h3>
-      <form onsubmit="return saveData('budgets', ['budget-category', 'budget-amount'])">
-        <input id="budget-category" placeholder="Category" required>
-        <input type="number" id="budget-amount" placeholder="Amount" required>
-        <button>Save</button>
-      </form>
-      <ul id="budget-list"></ul>
-    </div>
-
-    <div class="card" id="income">
-      <h3>💼 Income</h3>
-      <form onsubmit="return saveData('income', ['income-source', 'income-amount'])">
-        <input id="income-source" placeholder="Source" required>
-        <input type="number" id="income-amount" placeholder="Amount" required>
-        <button>Save</button>
-      </form>
-      <ul id="income-list"></ul>
-    </div>
-
-    <div class="card" id="objectives">
-      <h3>🎯 Objectives</h3>
-      <form onsubmit="return saveData('objectives', ['objective-name', 'objective-amount'])">
-        <input id="objective-name" placeholder="Objective" required>
-        <input type="number" id="objective-amount" placeholder="Target Amount" required>
-        <button>Save</button>
-      </form>
-      <ul id="objectives-list"></ul>
-    </div>
-
-    <div class="card" id="savings">
-      <h3>🏦 Savings</h3>
-      <form onsubmit="return saveData('savings', ['savings-type', 'savings-amount'])">
-        <input id="savings-type" placeholder="Type" required>
-        <input type="number" id="savings-amount" placeholder="Amount Saved" required>
-        <button>Save</button>
-      </form>
-      <ul id="savings-list"></ul>
-    </div>
-
-    <div class="card" id="chartCard">
-      <h3>📊 Income vs Budget</h3>
-      <canvas id="financeChart"></canvas>
-    </div>
-  </div>
-
-  <footer>
-    &copy; 2025 Budget Dreams Inc.
-  </footer>
-
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDucECRPTguaczzjbaxv8Tjy_n2uYoR4fM",
-      authDomain: "budgetdreams-4b58e.firebaseapp.com",
-      projectId: "budgetdreams-4b58e",
-      storageBucket: "budgetdreams-4b58e.appspot.com",
-      messagingSenderId: "842467931310",
-      appId: "1:842467931310:web:89365e0815f1707e55293f"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    auth.onAuthStateChanged(user => {
-      if (!user) window.location.href = "index.html";
-      else {
-        window.currentUser = user;
-        loadAllData();
-      }
-    });
-
-    function logout() { auth.signOut().then(() => location.href = "index.html"); }
-    function toggleDarkMode() { document.body.classList.toggle("dark"); }
-
-    async function saveData(collection, fields) {
-      event.preventDefault();
-      const data = { userId: auth.currentUser.uid, created: firebase.firestore.FieldValue.serverTimestamp() };
-      fields.forEach(id => data[id.replace(/-.*/, '')] = document.getElementById(id).value);
-      await db.collection(collection).add(data);
-      alert("Saved to " + collection);
-      loadData(collection);
-      event.target.reset();
-      return false;
-    }
-
-    async function loadAllData() {
-      ['budgets','income','objectives','savings'].forEach(loadData);
-    }
-
-    async function loadData(collection) {
-      const list = document.getElementById(collection + "-list");
-      list.innerHTML = "";
-      const snapshot = await db.collection(collection).where("userId", "==", auth.currentUser.uid).get();
-      let total = 0;
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const item = Object.values(data).filter(v => typeof v === 'string' || typeof v === 'number').join(" - ");
-        list.innerHTML += `<li>${item}</li>`;
-        if (collection === 'income' || collection === 'budgets') total += Number(data.amount);
-      });
-      if (collection === 'income') window.incomeTotal = total;
-      if (collection === 'budgets') window.budgetTotal = total;
-      if (window.incomeTotal && window.budgetTotal) renderChart();
-    }
-
-    function renderChart() {
-      const ctx = document.getElementById('financeChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'pie',
-        data: {
-          labels: ['Income', 'Budget'],
-          datasets: [{
-            data: [window.incomeTotal, window.budgetTotal],
-            backgroundColor: ['#2196f3', '#4caf50']
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinPlan - Personal Budget & Financial Goals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        dark: '#1F2937',
+                        light: '#F9FAFB'
+                    }
+                }
+            }
         }
-      });
-    }
-  </script>
-</body>
-</html>
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #4F46E5 0%, #10B981 100%);
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar {
+            transition: all 0.3s ease;
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar.collapsed .sidebar-text {
+            display: none;
+        }
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar bg-white shadow-lg w-64 flex-shrink-0 flex flex-col">
+            <div class="p-4 flex items-center space-x-2 border-b">
+                <div class="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-white font-bold">
+                    <i class="fas fa-wallet text-xl"></i>
+                </div>
+                <span class="logo-text text-xl font-bold text-dark">FinPlan</span>
+            </div>
+            <div class="flex-1 overflow-y-auto py-4">
+                <nav>
+                    <div class="px-4 space-y-1">
+                        <a href="#" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg bg-indigo-50 text-primary">
+                            <i class="fas fa-home mr-3 text-lg"></i>
+                            <span class="sidebar-text">Dashboard</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100">
+                            <i class="fas fa-chart-pie mr-3 text-lg"></i>
+                            <span class="sidebar-text">Budget</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100">
+                            <i class="fas fa-bullseye mr-3 text-lg"></i>
+                            <span class="sidebar-text">Goals</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100">
+                            <i class="fas fa-sticky-note mr-3 text-lg"></i>
+                            <span class="sidebar-text">Notes</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100">
+                            <i class="fas fa-history mr-3 text-lg"></i>
+                            <span class="sidebar-text">History</span>
+                        </a>
+                        <a href="#" class="nav-item flex items-center px-4 py-3 text-sm font-medium rounded-lg text-gray-600 hover:bg-gray-100">
+                            <i class="fas fa-cog mr-3 text-lg"></i>
+                            <span class="sidebar-text">Settings</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+            <div class="p-4 border-t">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <img class="h-10 w-10 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="User profile">
+                    </div>
+                    <div class="ml-3 sidebar-text">
+                        <p class="text-sm font-medium text-gray-900">John Doe</p>
+                        <p class="text-xs text-gray-500">View profile</p>
+                    </div>
+                    <button class="ml-auto text-gray-400 hover:text-gray-500 sidebar-text">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="flex-1 overflow-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm">
+                <div class="px-6 py-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <button class="text-gray-500 focus:outline-none">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <h1 class="text-xl font-semibold text-gray-900">Dashboard</h1>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="p-2 rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none">
+                            <i class="fas fa-bell text-xl"></i>
+                        </button>
+                        <button class="p-2 rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none">
+                            <i class="fas fa-question-circle text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="p-6">
+                <!-- Welcome Banner -->
+                <div class="gradient-bg rounded-xl p-6 text-white mb-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold mb-2">Welcome back, John!</h2>
+                            <p class="opacity-90">Track your spending, set financial goals, and take notes all in one place.</p>
+                        </div>
+                        <button class="mt-4 md:mt-0 bg-white text-primary font-medium px-6 py-2 rounded-lg hover:bg-opacity-90 transition">
+                            Quick Budget Setup
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Budget Overview -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium text-gray-900">Monthly Budget</h3>
+                            <span class="text-sm text-gray-500">June 2023</span>
+                        </div>
+                        <div class="flex items-end space-x-2 mb-4">
+                            <span class="text-3xl font-bold">$2,450</span>
+                            <span class="text-sm text-green-500">+12% from last month</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-primary h-2.5 rounded-full" style="width: 65%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-500 mt-2">
+                            <span>Spent: $1,592</span>
+                            <span>Remaining: $858</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium text-gray-900">Savings</h3>
+                            <span class="text-sm text-gray-500">YTD</span>
+                        </div>
+                        <div class="flex items-end space-x-2 mb-4">
+                            <span class="text-3xl font-bold">$8,250</span>
+                            <span class="text-sm text-green-500">+$1,200 this month</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div class="bg-secondary h-2.5 rounded-full" style="width: 45%"></div>
+                        </div>
+                        <div class="flex justify-between text-sm text-gray-500 mt-2">
+                            <span>Goal: $18,000</span>
+                            <span>45% complete</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-medium text-gray-900">Active Goals</h3>
+                            <span class="text-sm text-gray-500">3 in progress</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-home text-indigo-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium">House Down Payment</p>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                        <div class="bg-indigo-600 h-1.5 rounded-full" style="width: 30%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-car text-green-600"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium">New Car Fund</p>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                        <div class="bg-green-600 h-1.5 rounded-full" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Budget and Notes Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Budget Categories -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-medium text-gray-900">Budget Categories</h3>
+                            <button class="text-primary text-sm font-medium">View All</button>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+                                        <i class="fas fa-utensils text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Food & Dining</p>
+                                        <p class="text-xs text-gray-500">$450 of $600</p>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12">
+                                    <svg class="w-full h-full" viewBox="0 0 36 36">
+                                        <path
+                                            d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none"
+                                            stroke="#E5E7EB"
+                                            stroke-width="3"
+                                        />
+                                        <path
+                                            d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none"
+                                            stroke="#8B5CF6"
+                                            stroke-width="3"
+                                            stroke-dasharray="75, 100"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                        <i class="fas fa-home text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Housing</p>
+                                        <p class="text-xs text-gray-500">$1,200 of $1,200</p>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12">
+                                    <svg class="w-full h-full" viewBox="0 0 36 36">
+                                        <path
+                                            d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none"
+                                            stroke="#E5E7EB"
+                                            stroke-width="3"
+                                        />
+                                        <path
+                                            d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none"
+                                            stroke="#3B82F6"
+                                            stroke-width="3"
+                                            stroke-dasharray="100, 100"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center mr-3">
+                                        <i class="fas fa-shopping-bag text-yellow-600"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium">Shopping</p>
+                                        <p class="text-xs text-gray-500">$120 of $300</p>
+                                    </div>
+                                </div>
+                                <div class="w-12 h-12">
+                                    <svg class="w-full h-full" viewBox="0 0 36 36">
+                                        <path
+                                            d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none"
+                                            stroke="#E5E7EB"
+                                            stroke-width="3"
+                                        />
+                                        <path
+                                            d="M18 2.0845
+                                            a 15.9155 15.9155 0 0 1 0 31.831
+                                            a 15.9155 15.9155 0 0 1 0 -31.831"
+                                            fill="none"
+                                            stroke="#F59E0B"
+                                            stroke-width="3"
+                                            stroke-dasharray="40, 100"
+                                        />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="mt-6 w-full border border-dashed border-gray-300 rounded-lg py-3 text-gray-500 hover:border-gray-400 hover:text-gray-700 transition">
+                            <i class="fas fa-plus mr-2"></i> Add Category
+                        </button>
+                    </div>
+
+                    <!-- Recent Notes -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-medium text-gray-900">Recent Notes</h3>
+                            <button class="text-primary text-sm font-medium">View All</button>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="p-4 bg-indigo-50 rounded-lg">
+                                <div class="flex items-start justify-between mb-2">
+                                    <h4 class="font-medium text-gray-900">Vacation Planning</h4>
+                                    <span class="text-xs text-gray-500">2 days ago</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-3">Need to budget $2,000 for summer vacation. Looking at options in Mexico or Costa Rica...</p>
+                                <div class="flex space-x-2">
+                                    <span class="px-2 py-1 bg-white rounded text-xs text-gray-600">travel</span>
+                                    <span class="px-2 py-1 bg-white rounded text-xs text-gray-600">budget</span>
+                                </div>
+                            </div>
+                            <div class="p-4 bg-green-50 rounded-lg">
+                                <div class="flex items-start justify-between mb-2">
+                                    <h4 class="font-medium text-gray-900">Car Maintenance</h4>
+                                    <span class="text-xs text-gray-500">1 week ago</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb
